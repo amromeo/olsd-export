@@ -6,7 +6,7 @@ The project will capture published test details, preserve historical snapshots, 
 
 ## Status
 
-Planning stage. The repository currently contains the [project specification](SPEC.md); the collector, scheduled report, and web application have not been implemented. Installation and deployment instructions will be added alongside working code.
+The high-level [project specification](SPEC.md) is approved; the collector, scheduled report, and web application have not been implemented. Installation and deployment instructions will be added alongside working code.
 
 ## Planned workflow
 
@@ -36,6 +36,12 @@ Start by verifying complete inventory discovery and extracting representative de
 See [SPEC.md](SPEC.md) for scope, architecture, acceptance criteria, and outstanding deployment decisions.
 
 Generated exports, captured source pages, local credentials, and runtime caches belong outside version control. Keep small, intentional test fixtures in a dedicated fixtures directory when tests are introduced.
+
+## Deployment path
+
+Development source is published in this public repository. The user pulls the selected changes and pushes them to an institution-controlled private GitHub repository. Institution-managed Posit Connect then deploys the scheduled report and Shiny application from that private repository using GitHub-backed deployment.
+
+Institution-specific configuration and credentials are supplied through supported deployment settings or private configuration. Historical snapshots remain in pins across source updates and redeployments. Public examples will use placeholders; automatic public-to-private mirroring is outside the initial scope.
 
 ## Copyright
 

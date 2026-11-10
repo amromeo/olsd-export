@@ -1,6 +1,6 @@
 # CHOP Test Menu Export and Change Detection
 
-Status: Revised planning draft. User-confirmed scope and platform choices are incorporated; remaining defaults are identified below. No implementation has begun.
+Status: Approved high-level specification. User-confirmed scope, platform choices, and deployment path are incorporated; remaining operational defaults are identified below. No implementation has begun.
 
 ## Goal
 
@@ -116,6 +116,18 @@ Verify in the actual Connect execution environment:
 
 Deploy the scheduled R report and Shiny application separately, sharing collector/comparison functions within the repository. Reproduce dependencies with `renv` and the institution's supported Connect deployment workflow. Proposed scheduling timezone: America/New_York; store timestamps in UTC and display timezone labels in the report and application.
 
+### GitHub-backed deployment path
+
+1. Develop and publish reusable source, documentation, dependency lockfiles, and required deployment manifests in the public `amromeo/olsd-export` repository.
+2. The user pulls the public changes and pushes the selected revision to an institution-controlled private GitHub repository. This transfer is user-managed; automatic mirroring is outside the initial scope.
+3. Posit Connect uses GitHub-backed deployment from the private repository, with separate content configurations for the scheduled report and Shiny application.
+
+Keep the application portable between repository locations: no dependency on the public remote at runtime, a particular checkout directory, or developer-local files. During implementation, provide the entry points and manifests required by the installed Connect version, and verify that Git-backed deployment includes shared R code and restores dependencies for both content items.
+
+Configure institution-specific Connect URLs, pins locations, recipients, and runtime credentials through supported deployment settings or private configuration. Public examples use placeholders. Runtime snapshots, captured pages, and exports remain in pins or local ignored output paths rather than being committed to either source repository.
+
+Record the deployed source revision in run metadata where the deployment exposes it, and document how the user can identify the corresponding public revision. Code redeployment must preserve pins history and the accepted baseline. Verify the private-repository deployment trigger, scheduled execution, and application refresh behavior on the actual Connect installation.
+
 The source requires no login. Connect publishing, pins access, and email may require deployment credentials or service identities, configured through institution-supported mechanisms rather than embedded in code.
 
 ## Validation and acceptance
@@ -129,6 +141,7 @@ The source requires no login. Connect publishing, pins access, and email may req
 7. Confirm PDF links appear in exports and link changes appear in diffs, without downloading PDF contents.
 8. Verify the Shiny history, filters, comparison views, removed-test lookup, and downloads against known snapshots; verify emails link to the correct run.
 9. Simulate an interrupted pins write and a retried run; verify readers see only complete published snapshots and notification retries follow the documented behavior.
+10. Deploy both content items through Connect's private-GitHub-backed workflow after the user transfers a public revision; verify shared-code inclusion, dependency restoration, runtime configuration, and preservation of pins history across redeployment.
 
 ## Implementation sequence
 
