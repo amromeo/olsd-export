@@ -1,0 +1,42 @@
+# R session state and IDE files
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+.RDataTmp
+
+# Local environment configuration and credentials
+.Renviron
+.Renviron.*
+!.Renviron.example
+.env
+.env.*
+!.env.example
+
+# Installed R dependencies and local renv state
+# Keep renv.lock, renv/activate.R, renv/settings.json, and .Rprofile tracked.
+/renv/library/
+/renv/staging/
+/renv/cache/
+/renv/local/
+/renv/lock/
+
+# Runtime data and generated outputs; do not ignore test fixtures globally.
+/data/raw/
+/data/snapshots/
+/data/exports/
+/artifacts/
+/outputs/
+/logs/
+/.cache/
+/.pins/
+
+# Local deployment metadata and rendered report intermediates
+/rsconnect/
+*_cache/
+*_files/
+/.quarto/
+
+# Operating-system files
+.DS_Store
+Thumbs.db
