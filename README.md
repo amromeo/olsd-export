@@ -1,14 +1,16 @@
 # olsd-export
 
-Planned automated export and change tracking for the [CHOP laboratory test menu](https://www.testmenu.com/chop).
+Automated export and change tracking for the [CHOP laboratory test menu](https://www.testmenu.com/chop).
 
-The project will capture published test details, preserve historical snapshots, and make changes easy to review over time.
+The project captures published test details, preserves historical snapshots, and makes changes easy to review over time.
 
 ## Status
 
-The high-level [project specification](SPEC.md) is approved; the collector, scheduled report, and web application have not been implemented. Installation and deployment instructions will be added alongside working code.
+The first R implementation includes inventory verification, detail collection, JSON/Excel exports, pins history, field-level comparisons, a Shiny viewer, and a scheduled R Markdown report. Institution-specific deployment and email delivery still require validation on your Posit Connect installation.
 
-## Planned workflow
+See [development and deployment instructions](docs/deployment.md) and the approved [project specification](SPEC.md).
+
+## Workflow
 
 1. Collect all publicly discoverable test details daily, including send-out tests.
 2. Export structured JSON for comparison and Excel for review.
@@ -18,20 +20,30 @@ The high-level [project specification](SPEC.md) is approved; the collector, sche
 
 PDF link labels and destinations are included. PDF files and their contents are not collected. Incomplete collection runs must not replace the accepted baseline or produce false removal reports.
 
-## Planned technology
+## Technology
 
 - **R** with `httr2` and `rvest`/`xml2` for direct HTTP collection and HTML parsing.
 - **JSON** as the authoritative export and basis for structured comparisons.
 - **pins** for persistent snapshots and manifests.
 - **R Markdown** for scheduled collection and reporting on Posit Connect.
 - **Shiny** for browsing current details and historical changes.
-- **renv** for reproducible R dependencies once implementation begins.
+- **renv** lockfile for R dependencies.
 
-Browser automation is a fallback if site inspection shows that JavaScript execution is required. The source's discovery mechanism and page structure still need verification.
+The menu's public data endpoint provides stable test IDs, and its detail pages contain ordinary HTML. Collection uses direct HTTP requests; no browser automation is needed. Inventory acceptance requires agreement between the complete index and paginated search, plus checks against public category/status lists.
 
-## Development plan
+## Running locally
 
-Start by verifying complete inventory discovery and extracting representative detail pages. Then validate pins access and scheduled execution on Connect before building complete snapshots, comparison logic, notifications, and the history application.
+Install/restore the packages and activate the project library as described in the [setup guide](docs/deployment.md). From an R session at the repository root:
+
+```r
+renv::load()
+testthat::test_dir("tests/testthat")
+source("scripts/sample-export.R") # Complete inventory check; seven-test sample export
+source("scripts/collect.R")       # Complete catalog collection; may take many minutes
+shiny::runApp(".")
+```
+
+Local defaults retain data in the ignored `outputs/` directory. Public configuration examples are in [.env.example](.env.example). The project does not automatically load that file.
 
 See [SPEC.md](SPEC.md) for scope, architecture, acceptance criteria, and outstanding deployment decisions.
 

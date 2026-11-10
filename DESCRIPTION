@@ -1,0 +1,24 @@
+Package: olsdexport
+Title: CHOP Laboratory Test Menu Export and History
+Version: 0.1.0
+Authors@R: person("amromeo", role = c("aut", "cre"), email = "amromeo@gmail.com")
+Description: Scheduled public test-menu collection, structured exports, and
+    change review for deployment on institution-managed Posit Connect.
+License: file COPYRIGHT
+Encoding: UTF-8
+Depends: R (>= 4.1.0)
+Imports:
+    httr2,
+    rvest,
+    xml2,
+    jsonlite,
+    writexl,
+    pins,
+    shiny,
+    rmarkdown,
+    knitr
+Suggests:
+    renv,
+    rsconnect,
+    testthat,
+    withr

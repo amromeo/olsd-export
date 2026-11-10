@@ -1,6 +1,6 @@
 # CHOP Test Menu Export and Change Detection
 
-Status: Approved high-level specification. User-confirmed scope, platform choices, and deployment path are incorporated; remaining operational defaults are identified below. No implementation has begun.
+Status: Approved high-level specification with an initial R implementation. User-confirmed scope, platform choices, and deployment path are incorporated; institution-specific deployment validation and remaining operational decisions are tracked in [the deployment guide](docs/deployment.md).
 
 ## Goal
 
@@ -162,4 +162,6 @@ These deployment details do not block drafting the collector and comparison desi
 
 ## Current evidence and limits
 
-The repository was empty at planning start. No source code has been implemented. Direct inspection of `testmenu.com` was blocked by this cloud environment's outbound policy; the menu's page structure, inventory mechanism, identifiers, and endpoints remain unverified. Posit Connect runtime capabilities have not yet been tested. These checks are the first implementation milestone.
+The public menu is accessible from the development environment. Its GetAll data endpoint exposes stable test IDs and can be reconciled against the paginated search endpoint and category/status lists. The first inventory check found 1,554 tests, and seven representative test exports verified HTML detail extraction, reference tables, and document links without browser automation. Counts can change as the source catalog changes.
+
+The initial implementation includes collection, pins persistence, JSON/Excel exports, comparisons, a Shiny history viewer, scheduled reporting, and generated Git-backed deployment bundles. See [validation notes](docs/validation.md) for executed checks and their limits. The institution's Connect version, permissions, pins authentication/sharing, schedule concurrency, and email delivery still need testing on the target installation.
