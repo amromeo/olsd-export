@@ -36,11 +36,17 @@ A second complete pass over the same retained source pages ran in a fresh R proc
 
 Offline regression tests exercise complete inventory traversal and rejection of incomplete pagination, detail identity/layout checks, exclusion of mobile duplicates, tables and spans, PDF links, line-break normalization, scientific superscripts, field-level numerical changes, reordered fields, missing/removal confirmation, edited reappearance, schema migration rejection, real local pins round trips, baseline preservation after a detail failure, Excel long-text preservation, and Shiny detail/change/filter output.
 
-The final local suite passed 48 assertions with no failures, warnings, or skips. A GitHub Actions workflow is included for subsequent pushes; its remote result is distinct from these local checks.
+The initial local suite passed 48 assertions with no failures, warnings, or skips. A GitHub Actions workflow is included for subsequent pushes; its remote result is distinct from these local checks.
 
 Automated Chromium smoke tests opened the live Shiny process against a separate local sample board and verified test details, the empty change view, run history, test search, clinical tables, and a JSON download, without JavaScript errors. The scheduled R Markdown report rendered successfully against that sample board with collection disabled. These checks do not establish institution-side Connect deployment or actual email delivery.
 
 The viewer was also checked against the complete catalog: archive provenance, search across the full inventory, and reference-table rendering passed without JavaScript errors. The scheduled report rendered successfully from the complete accepted snapshot.
+
+## Local entry-point regression
+
+Relative local storage paths originally depended on the process working directory. A collector run from the repository root could therefore save a valid baseline that `shiny::runApp("deploy/app")` could not see. Local storage, output, and lock paths now resolve from the repository root when running inside a complete checkout. Explicit absolute paths are preserved; isolated deployment directories remain self-contained, and Connect working paths stay within the content directory.
+
+The updated suite passed 63 assertions with no failures, warnings, or skips, including root/generated-entry-point sharing, standalone paths, Windows drive/UNC paths, and Connect path isolation. An automated browser test launched the generated app with `shiny::runApp("deploy/app")` and displayed the existing root board's 1,554-test history without another collection. Both deployment directories and manifest checksums were regenerated and verified.
 
 ## Remaining target checks
 

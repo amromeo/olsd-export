@@ -73,7 +73,14 @@ server <- function(input, output, session) {
   output$status <- renderText({
     input$refresh
     manifest <- history()
-    if (!length(manifest$runs)) return("No accepted snapshots yet. Run the scheduled collector first.")
+    if (!length(manifest$runs)) {
+      if (!identical(Sys.getenv("OLSD_STORE", "local"), "connect")) {
+        return(paste("No accepted snapshots found in", history_path("OLSD_BOARD_PATH", "outputs/board"),
+          "for pin prefix", Sys.getenv("OLSD_PIN_PREFIX", "olsd"),
+          ". If collection already succeeded, check that the collector used this folder and prefix."))
+      }
+      return("No accepted snapshots yet. Run the scheduled collector first.")
+    }
     latest <- tail(manifest$runs, 1)[[1]]
     status <- if (pins::pin_exists(board, history_name("last-attempt"))) pins::pin_read(board, history_name("last-attempt")) else NULL
     age <- difftime(Sys.time(), as.POSIXct(latest$collected_at, format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"), units = "hours")

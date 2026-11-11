@@ -2194,13 +2194,13 @@
   },
   "files": {
     "app.R": {
-      "checksum": "1e2ba5c09fdf10ebe8cbef5adbe64421"
+      "checksum": "26320aa5e269feef1e7114d2d8a5fc4a"
     },
     "COPYRIGHT": {
       "checksum": "3e7965108bfc8ad60aa0925e3a54685c"
     },
     "R/history.R": {
-      "checksum": "d8b2439ed086b58f38a565f259570b16"
+      "checksum": "370aeaab412504013df3bfc0de7d9c78"
     },
     "R/source.R": {
       "checksum": "b9be9d6ded445c4daf645c4873a6089e"

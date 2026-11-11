@@ -45,6 +45,8 @@ shiny::runApp(".")
 
 Local defaults retain data in the ignored `outputs/` directory. Public configuration examples are in [.env.example](.env.example). The project does not automatically load that file.
 
+Edit the root `app.R` and use `shiny::runApp(".")` for local development. `deploy/app/app.R` is a generated copy for Connect; inside a complete checkout it shares the root app's local snapshot folder. See [local app entry points and troubleshooting](docs/deployment.md#which-app-should-i-run-locally).
+
 See [SPEC.md](SPEC.md) for scope, architecture, acceptance criteria, and outstanding deployment decisions.
 
 Generated exports, captured source pages, local credentials, and runtime caches belong outside version control. Keep small, intentional test fixtures in a dedicated fixtures directory when tests are introduced.

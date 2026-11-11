@@ -80,13 +80,39 @@ history_next <- function(manifest, previous, current) {
   list(events = events, absent = absent, baseline = FALSE)
 }
 
+history_work_root <- function(start = getwd()) {
+  start <- normalizePath(start, winslash = "/", mustWork = TRUE)
+  # Connect content items use their own working files and share remote pins.
+  if (identical(Sys.getenv("OLSD_STORE", "local"), "connect")) return(start)
+  candidate <- start
+  repeat {
+    description <- file.path(candidate, "DESCRIPTION")
+    if (file.exists(description) && file.exists(file.path(candidate, "scripts", "build-deploy.R"))) {
+      package <- tryCatch(read.dcf(description, fields = "Package")[[1L]],
+                          error = function(e) "")
+      if (identical(package, "olsdexport")) return(candidate)
+    }
+    parent <- dirname(candidate)
+    if (identical(parent, candidate)) return(start)
+    candidate <- parent
+  }
+}
+
+history_path <- function(variable, default) {
+  path <- path.expand(Sys.getenv(variable, default))
+  if (!nzchar(path)) stop(variable, " must not be empty")
+  absolute <- startsWith(path, "/") || startsWith(path, "\\\\") ||
+    grepl("^[A-Za-z]:[/\\\\]", path)
+  if (absolute) path else file.path(history_work_root(), path)
+}
+
 history_board <- function() {
   if (identical(Sys.getenv("OLSD_STORE", "local"), "connect")) {
     pins::board_connect(auth = "envvar", use_cache_on_failure = FALSE)
   } else {
     # History is explicit in immutable run pins. Unversioned local pointers also
     # avoid ambiguous latest-version ordering for multiple writes in one second.
-    pins::board_folder(Sys.getenv("OLSD_BOARD_PATH", "outputs/board"), versioned = FALSE)
+    pins::board_folder(history_path("OLSD_BOARD_PATH", "outputs/board"), versioned = FALSE)
   }
 }
 
@@ -114,7 +140,7 @@ history_collect <- function(board = history_board(), fetch = menu_get,
     stop("Request pause must be nonnegative and at least 0.1 seconds for live collection")
   }
   # Deployment must also serialize this content across workers/hosts.
-  lock <- Sys.getenv("OLSD_LOCK_PATH", "outputs/collector.lock")
+  lock <- history_path("OLSD_LOCK_PATH", "outputs/collector.lock")
   dir.create(dirname(lock), recursive = TRUE, showWarnings = FALSE)
   if (!dir.create(lock, showWarnings = FALSE)) stop("Collector lock exists: ", lock)
   on.exit(unlink(lock, recursive = TRUE), add = TRUE)
@@ -124,7 +150,7 @@ history_collect <- function(board = history_board(), fetch = menu_get,
                paste("host", Sys.info()[["nodename"]])), file.path(lock, "owner.txt"))
   started <- utc_now()
   status <- list(id = run_id, started_at = started, status = "running")
-  work <- file.path(Sys.getenv("OLSD_OUTPUT_PATH", "outputs/runs"), run_id)
+  work <- file.path(history_path("OLSD_OUTPUT_PATH", "outputs/runs"), run_id)
   dir.create(file.path(work, "source"), recursive = TRUE)
   tryCatch({
     manifest <- history_manifest(board)

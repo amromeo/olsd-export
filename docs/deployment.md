@@ -23,6 +23,27 @@ The sample script verifies the complete inventory but exports seven representati
 
 Defaults use a local pins board in `outputs/board`, with source captures and exports in `outputs/runs`. These directories are ignored by Git. `.env.example` documents configuration; it is not loaded automatically. A private `.Renviron` can configure local R sessions.
 
+### Which app should I run locally?
+
+The root `app.R` is the source application. `deploy/app/app.R` is its generated deployment copy. Edit the root files and regenerate deployment copies with `scripts/build-deploy.R`.
+
+For local development, launch from the repository root:
+
+```r
+shiny::runApp(".")
+```
+
+The generated app can also be launched with `shiny::runApp("deploy/app")`. In a complete repository checkout, relative local board, output, and lock paths resolve from the repository root, so both entry points use the same `outputs/board`. A standalone deployment directory uses its own working directory. Connect-backed storage continues to use the configured shared pins board.
+
+If a collector succeeded but the app shows no snapshots, check `OLSD_STORE`, `OLSD_BOARD_PATH`, and `OLSD_PIN_PREFIX` in the R session. For an existing baseline stored elsewhere, set its absolute folder before launching; from the repository root, for example:
+
+```r
+Sys.setenv(OLSD_BOARD_PATH = normalizePath("outputs/board", winslash = "/", mustWork = TRUE))
+shiny::runApp("deploy/app")
+```
+
+An accepted baseline does not need to be collected again to change which local app entry point you use.
+
 ## Generate the Connect deployment manifests
 
 Git-backed deployment uses `rsconnect::writeManifest()`. This project has two content items, each with its own manifest:
