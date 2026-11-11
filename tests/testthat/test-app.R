@@ -33,5 +33,9 @@ testthat::test_that("Shiny renders selected tests and before/after changes from 
     testthat::expect_match(output$change$html, "2 mg/L")
     session$setInputs(field = "unmatched")
     testthat::expect_match(output$change$html, "No changes match")
+    pins::pin_write(board, list(status = "running", started_at = app_env$utc_now()),
+      name = "app-test-last-attempt", type = "rds")
+    session$setInputs(refresh = 2)
+    testthat::expect_match(output$status, "Last attempt: running")
   })
 })

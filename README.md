@@ -59,6 +59,8 @@ Run `source("scripts/build-deploy.R")` with the project library loaded to synchr
 
 Institution-specific configuration and credentials are supplied through supported deployment settings or private configuration. Historical snapshots remain in pins across source updates and redeployments. Public examples will use placeholders; automatic public-to-private mirroring is outside the initial scope.
 
+For storage problems, set `OLSD_PREFLIGHT_ONLY=true` on the collector and render a [storage-only diagnostic report](docs/deployment.md#diagnose-storage-and-request-failures-before-a-full-collection). It verifies a small pin before any test-menu requests and shows the destination, account, and pin URLs. Return the flag to `false` for normal collection.
+
 ## Copyright
 
 Copyright © 2026 amromeo. See [COPYRIGHT](COPYRIGHT). An open-source license has not been selected.

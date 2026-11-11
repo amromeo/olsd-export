@@ -108,6 +108,43 @@ Configure `OLSD_APP_URL` on the collector to the actual Shiny application URL so
 
 The collector identity needs permission to create and update pins; the Shiny identity needs read access to the same pins. Pin sharing and ownership must be verified on the institution's Connect instance. Sharing the Shiny app does not automatically share its pins. Keep API keys and institution-specific settings out of both source repositories.
 
+Connect may already inject `CONNECT_SERVER` and an ephemeral `CONNECT_API_KEY` for the content owner. Reuse those when available and suitable; set explicit values only when the institution disables that feature or requires another identity. Diagnostics record presence and the authenticated account, never the key value. See [Connect runtime variables](https://docs.posit.co/connect/user/content-settings/#environment-variables).
+
+## Diagnose storage and request failures before a full collection
+
+For a quick check on Connect:
+
+1. Transfer the updated source and generated deployment files to private GitHub, then redeploy the collector content from that revision.
+2. Set `OLSD_STORE=connect` and `OLSD_PREFLIGHT_ONLY=true` on the **collector** content. Values should not contain literal quotation marks. Render the report with the new code and settings.
+3. Look for `storage-diagnostics-1` and `execution=preflight-only` near the beginning of the render log. This confirms that the new diagnostics code is executing. The check connects to the configured server, writes a small pin, reads it back, and reports its published URL, content GUID, account, and full name. It does not contact `testmenu.com`, run the collector, or modify the accepted baseline.
+4. The diagnostic pin has internal name `<prefix>-diagnostics` and display title **OLSD storage diagnostics**. The HTML report lists its exact location and whether index/status pins already exist. A successful probe proves small-pin creation and readback; a later large upload or index update can still fail and has separate checkpoints.
+5. After the preflight passes, set `OLSD_PREFLIGHT_ONLY=false` and run the full collector. Full collections also run the storage check before requesting any test pages.
+
+Locally, `source("scripts/preflight.R")` runs the same storage-only check using the current configuration. The report also accepts the R Markdown parameter `preflight_only: true`. Preflight reports suppress scheduled email; restore normal collection mode after troubleshooting.
+
+Progress is sent to the render console even though the setup chunk is hidden from the document. Expect these stages:
+
+| Log marker | Meaning / useful next check |
+| --- | --- |
+| `CONFIG`, `BOARD`, `BOARD_OK` | Selected configuration, server, and authenticated account; missing/invalid configuration fails before collection. A Connect API timeout here concerns access from the runner to the Connect server. |
+| `PREFLIGHT_WRITE`, `PREFLIGHT_READ`, `PREFLIGHT_OK` | A small pin is created and read back. Inspect permissions, the pin prefix, or runner-to-Connect networking if this fails. |
+| `SOURCE_HTTP`, `SOURCE_HTTP_OK` | The URL of an inventory/search request and its HTTP outcome. |
+| `DETAILS` | Test count, percentage, current test URL at the start of each batch, and elapsed collection time. Defaults to a batch of 25 tests. |
+| `SOURCE_HTTP_RETRY`, `SOURCE_HTTP_FAILED` | Bounded retry or final failure of an exact test-menu URL. A timeout here concerns source access, not pin publication. |
+| `EXPORT`, `UPLOAD`, `VERIFY` | Local artifact generation, snapshot upload, and verification by downloading and comparing checksums. |
+| `INDEX`, `INDEX_OK`, `STATUS`, `ACCEPTED` | Index publication and readback, final status publication/readback, and completion. |
+| `FAILED` | Last stage, current test ID, successful detail count, and a redacted error. |
+
+For finer tracing, set `OLSD_PROGRESS_EVERY=1` and/or `OLSD_HTTP_TRACE=true` while troubleshooting. Source requests retain a 60-second per-request timeout; transport errors and transient HTTP responses receive up to three total attempts, with retry messages. Repeated zero-byte timeouts may require the institution to check DNS, proxy/firewall policy, or outbound access to the exact logged source host. Increasing a timeout does not establish that a destination is reachable.
+
+The report lists storage mode, board class, server/account or local directory, pin prefix, variable presence, and actual pin URLs/GUIDs. The snapshot pin's **display title** is `OLSD run <run ID>`; its internal name is `<prefix>-run-<run ID>`, so a UI search for the internal name alone may be misleading. Check the report's account and direct URLs, including content-type/owner filters in Connect.
+
+Local working files include `run-log.jsonl` and a failure record with stage/test context. Successful run pins also contain `storage.json` and a frozen `collection-log.jsonl` covering collection through upload start. The live render log continues through upload, index, and status verification. A running last-attempt pin is saved after preflight; preflight-only checks do not replace collection status.
+
+Connect requires `OLSD_STORE=connect` when its documented runtime marker identifies the process as Connect. Invalid storage values fail explicitly instead of falling back to local files. Variables must be set on the collector as well as the Shiny content; each content item has its own runtime settings.
+
+Connect can continue serving the previous successful HTML report after a failed render. Confirm the diagnostics marker, execution mode, run ID, and latest job outcome in the **render log** before treating a visible report as the new result.
+
 Schedule the collector daily, with the chosen time and timezone (proposed: America/New_York). Enable scheduled email for the intended recipients. The R Markdown report suppresses scheduled email on unchanged runs; baseline and changed runs get a subject, summary, and app link. Configure Connect's render-failure notifications for the owner/operator. These platform features are documented in [Connect scheduling](https://docs.posit.co/connect/user/scheduling/) and [R Markdown email customization](https://docs.posit.co/connect/user/rmarkdown/#r-markdown-email-customization); verify support in the installed version.
 
 Timestamps are stored in UTC. Reports and the Shiny viewer display America/New_York by default, with timezone labels; set `OLSD_DISPLAY_TZ` on both content items to change presentation. Set the Connect schedule's timezone separately.

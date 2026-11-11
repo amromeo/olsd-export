@@ -48,6 +48,16 @@ Relative local storage paths originally depended on the process working director
 
 The updated suite passed 63 assertions with no failures, warnings, or skips, including root/generated-entry-point sharing, standalone paths, Windows drive/UNC paths, and Connect path isolation. An automated browser test launched the generated app with `shiny::runApp("deploy/app")` and displayed the existing root board's 1,554-test history without another collection. Both deployment directories and manifest checksums were regenerated and verified.
 
+## Storage diagnostics and request timeouts
+
+The collector now verifies a small diagnostic pin before requesting any test-menu pages, records its destination/account and published metadata, and emits timestamped checkpoints through the render console. The hidden setup chunk explicitly forwards messages. Accepted run and status writes are read back for verification; failures record stage, collected count, current test ID, and redacted errors. Invalid storage modes and missing Connect configuration fail before collection instead of using a local fallback on Connect.
+
+Local tests cover probe write/read and baseline preservation, stopping before source requests when pin publication fails, credential redaction and safe URL handling, Connect configuration validation, hidden-chunk console messages, storage-only report generation without source HTTP calls, and three bounded transport attempts with an exact source URL in the final error. A real storage-only HTML report and an existing full-catalog report were also rendered locally. No additional live catalog crawl was needed.
+
+These checks do not prove network access or permissions on the institution's Connect runner. The reported 60-second `httr2` timeout points to the source reader in this codebase; the new request URL and stage logs are intended to identify the actual failing connection on the next institution-side run.
+
+The updated local suite passed 97 assertions with no failures, warnings, or skips. Both generated deployment copies and their manifest checksums were verified after regeneration. The institution-side timeout remains unverified until the updated diagnostics run there.
+
 ## Remaining target checks
 
 The actual Connect installation has not been accessed. Private GitHub deployment, installed runtime compatibility, fresh package restoration, pins ownership/sharing, scheduling and overlap behavior, email recipients and delivery, and history preservation across redeployment remain required checks. Follow [the deployment guide](deployment.md) after transferring the code to the private repository.

@@ -3,62 +3,100 @@ title: "CHOP test menu collection"
 output: html_document
 params:
   collect: true
+  preflight_only: false
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, message=NA}
 knitr::opts_chunk$set(error = FALSE)
 source("R/source.R")
 source("R/history.R")
+preflight_only <- isTRUE(params$preflight_only) || history_flag("OLSD_PREFLIGHT_ONLY")
+history_log("REPORT_START", paste("diagnostics=", history_diagnostics_version,
+  "; execution=", if (preflight_only) "preflight-only" else if (isTRUE(params$collect)) "full-collection" else "existing-run", sep = ""))
 board <- history_board()
-result <- if (isTRUE(params$collect)) history_collect(board) else {
-  if (!pins::pin_exists(board, history_name("last-attempt"))) stop("No collection status available")
-  pins::pin_read(board, history_name("last-attempt"))
+run <- NULL
+snapshot <- NULL
+if (preflight_only) {
+  storage <- history_preflight(board)
+  rmarkdown::output_metadata$set(rsc_email_subject = "CHOP storage preflight", rsc_email_suppress_scheduled = TRUE)
+} else {
+  result <- if (isTRUE(params$collect)) history_collect(board) else {
+    if (!pins::pin_exists(board, history_name("last-attempt"))) stop("No collection status available. Use OLSD_PREFLIGHT_ONLY=true for a storage-only check.")
+    pins::pin_read(board, history_name("last-attempt"))
+  }
+  manifest <- history_manifest(board)
+  if (!length(manifest$runs)) stop("No accepted snapshot is available on this board and pin prefix.")
+  run <- tail(manifest$runs, 1)[[1]]
+  snapshot <- history_snapshot(board, run)
+  storage <- if (!is.null(run$storage)) run$storage else history_storage_info(board)
+  changed_tests <- length(unique(vapply(run$events, `[[`, "", "test_id")))
+  app_url <- Sys.getenv("OLSD_APP_URL")
+  if (nzchar(app_url)) app_url <- paste0(sub("/$", "", app_url), "/?run=", utils::URLencode(run$id, reserved = TRUE))
+  rmarkdown::output_metadata$set(
+    rsc_email_subject = paste("CHOP test menu:", if (run$baseline) "baseline established" else paste(changed_tests, "changed tests")),
+    rsc_email_body_text = paste("CHOP test menu:", run$count, "tests collected at", display_time(run$collected_at),
+      if (run$baseline) "Initial baseline established." else paste(changed_tests, "changed tests;", run$event_count, "field/status events."),
+      if (nzchar(app_url)) paste("Review changes:", app_url) else "See the attached report."),
+    rsc_email_suppress_scheduled = !run$baseline && run$event_count == 0
+  )
 }
-manifest <- history_manifest(board)
-run <- tail(manifest$runs, 1)[[1]]
-snapshot <- history_snapshot(board, run)
-changed_tests <- length(unique(vapply(run$events, `[[`, "", "test_id")))
-app_url <- Sys.getenv("OLSD_APP_URL")
-if (nzchar(app_url)) app_url <- paste0(sub("/$", "", app_url), "/?run=", utils::URLencode(run$id, reserved = TRUE))
-rmarkdown::output_metadata$set(
-  rsc_email_subject = paste("CHOP test menu:", if (run$baseline) "baseline established" else paste(changed_tests, "changed tests")),
-  rsc_email_body_text = paste("CHOP test menu:", run$count, "tests collected at", display_time(run$collected_at),
-    if (run$baseline) "Initial baseline established." else paste(changed_tests, "changed tests;", run$event_count, "field/status events."),
-    if (nzchar(app_url)) paste("Review changes:", app_url) else "See the attached report."),
-  rsc_email_suppress_scheduled = !run$baseline && run$event_count == 0
-)
+locations <- history_pin_rows(board, run)
+history_log("REPORT_READY", paste("diagnostics=", history_diagnostics_version,
+  "; storage=", storage$mode, "; execution=", if (preflight_only) "preflight-only" else "accepted-run", sep = ""))
 ```
 
-Collected **`r run$count` tests** at `r display_time(run$collected_at)`.
+```{r outcome, echo=FALSE, results='asis'}
+cat("Diagnostics version: **", history_diagnostics_version, "**\n\n", sep = "")
+if (preflight_only) {
+  cat("**Storage preflight passed.** A small diagnostic pin was written and read back. No test-menu pages were collected and the accepted baseline was not changed.\n\n")
+  cat("Set `OLSD_PREFLIGHT_ONLY=false` before the next full collection.\n\n")
+} else {
+  cat("Collected **", run$count, " tests** at ", display_time(run$collected_at), ".\n\nRun: `", run$id, "`\n\n", sep = "")
+}
+```
 
-Run: `r run$id`
+## Storage and configuration
+
+Only variable presence is recorded; credential values are omitted.
+
+```{r storage, echo=FALSE}
+knitr::kable(history_storage_rows(storage))
+```
+
+## Pin locations
+
+The name, owning account, content GUID, and published URL identify the destination. In Connect, the snapshot pin's display title is `OLSD run <run ID>`, which differs from its internal pin name. During a storage-only preflight, the diagnostic pin is created; run/index pins may not exist yet.
+
+```{r locations, echo=FALSE}
+knitr::kable(locations)
+```
 
 ```{r provenance, echo=FALSE}
-if (identical(snapshot$source_mode, "archive")) {
+if (!is.null(snapshot) && identical(snapshot$source_mode, "archive")) {
   cat("Reprocessed retained source pages; this was not a new live website collection. Source capture window:",
       display_time(snapshot$source_window$first), "to", display_time(snapshot$source_window$last), "\n")
 }
 ```
 
 ```{r summary, echo=FALSE}
-if (run$baseline) {
-  cat("Initial baseline established. Future accepted runs will be compared with it.\n")
-} else if (!length(run$events)) {
-  cat("No changes detected.\n")
-} else {
-  counts <- table(vapply(run$events, `[[`, "", "type"))
-  types <- names(counts)
-  tests <- vapply(types, function(type) length(unique(vapply(Filter(function(e) e$type == type, run$events), `[[`, "", "test_id"))), 1L)
-  knitr::kable(data.frame(type = types, tests = tests, events = as.integer(counts)))
+if (!is.null(run)) {
+  if (run$baseline) cat("Initial baseline established. Future accepted runs will be compared with it.\n")
+  else if (!length(run$events)) cat("No changes detected.\n")
+  else {
+    counts <- table(vapply(run$events, `[[`, "", "type"))
+    types <- names(counts)
+    tests <- vapply(types, function(type) length(unique(vapply(Filter(function(e) e$type == type, run$events), `[[`, "", "test_id"))), 1L)
+    knitr::kable(data.frame(type = types, tests = tests, events = as.integer(counts)))
+  }
 }
 ```
 
 ```{r link, echo=FALSE, results='asis'}
-if (nzchar(app_url)) cat("[Review this run in the history application](", app_url, ")\n", sep = "")
+if (!is.null(run) && nzchar(app_url)) cat("[Review this run in the history application](", app_url, ")\n", sep = "")
 ```
 
 ```{r changes, echo=FALSE}
-if (length(run$events)) {
+if (!is.null(run) && length(run$events)) {
   rows <- lapply(run$events, function(e) data.frame(
     test = e$name, id = e$test_id, type = e$type,
     field = if (is.null(e$field)) "" else e$field

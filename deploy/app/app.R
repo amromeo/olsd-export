@@ -73,8 +73,16 @@ server <- function(input, output, session) {
   output$status <- renderText({
     input$refresh
     manifest <- history()
+    status <- if (pins::pin_exists(board, history_name("last-attempt"))) pins::pin_read(board, history_name("last-attempt")) else NULL
     if (!length(manifest$runs)) {
-      if (!identical(Sys.getenv("OLSD_STORE", "local"), "connect")) {
+      if (!is.null(status) && identical(status$status, "running")) {
+        return(paste("Collection is running; started", display_time(status$started_at), ". See the collector render log for progress."))
+      }
+      if (!is.null(status) && identical(status$status, "failed")) {
+        stage <- if (is.null(status$stage)) "unknown (older collector)" else status$stage
+        return(paste("The last collection failed at stage", stage, ". See the collector render log for details."))
+      }
+      if (!inherits(board, "pins_board_connect")) {
         return(paste("No accepted snapshots found in", history_path("OLSD_BOARD_PATH", "outputs/board"),
           "for pin prefix", Sys.getenv("OLSD_PIN_PREFIX", "olsd"),
           ". If collection already succeeded, check that the collector used this folder and prefix."))
@@ -82,10 +90,10 @@ server <- function(input, output, session) {
       return("No accepted snapshots yet. Run the scheduled collector first.")
     }
     latest <- tail(manifest$runs, 1)[[1]]
-    status <- if (pins::pin_exists(board, history_name("last-attempt"))) pins::pin_read(board, history_name("last-attempt")) else NULL
+    attempt_time <- if (!is.null(status$finished_at)) status$finished_at else status$started_at
     age <- difftime(Sys.time(), as.POSIXct(latest$collected_at, format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"), units = "hours")
     paste("Last accepted:", display_time(latest$collected_at),
-          if (!is.null(status)) paste("Last attempt:", status$status, display_time(status$finished_at)) else "",
+          if (!is.null(status)) paste("Last attempt:", status$status, display_time(attempt_time)) else "",
           if ((!is.null(status) && status$status == "failed") || age > 36) "Data may be stale." else "")
   })
   render_value <- function(value) {

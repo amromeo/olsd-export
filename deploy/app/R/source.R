@@ -21,14 +21,33 @@ menu_content_text <- function(node) {
 }
 
 menu_get <- function(path, body = NULL) {
+  target <- paste0(menu_base, path)
+  log <- function(stage, text) {
+    if (exists("history_log", mode = "function")) history_log(stage, text)
+    else message("OLSD ", format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"), " [", stage, "] ", text)
+  }
+  trace <- if (exists("history_flag", mode = "function")) history_flag("OLSD_HTTP_TRACE") else {
+    tolower(trimws(Sys.getenv("OLSD_HTTP_TRACE", "false"))) == "true"
+  }
+  if (trace || !grepl("/Tests/", path, fixed = TRUE)) log("SOURCE_HTTP", paste("Requesting", target, "(timeout 60 seconds)"))
   req <- httr2::request(paste0(menu_base, path)) |>
     httr2::req_user_agent("olsd-export/0.1 (public laboratory test catalog export)") |>
     httr2::req_timeout(60) |>
-    httr2::req_retry(max_tries = 3)
+    httr2::req_retry(max_tries = 3, retry_on_failure = TRUE, backoff = function(tries) {
+      delay <- min(30, 2^tries)
+      log("SOURCE_HTTP_RETRY", paste("Retrying", target, "after", delay, "seconds; completed attempts:", tries))
+      delay
+    })
   ca <- Sys.getenv("SSL_CERT_FILE")
   if (nzchar(ca)) req <- httr2::req_options(req, cainfo = ca)
   if (!is.null(body)) req <- httr2::req_body_json(req, body, auto_unbox = TRUE)
-  response <- httr2::req_perform(req)
+  response <- tryCatch(httr2::req_perform(req), error = function(e) {
+    detail <- paste("Source request failed:", target, "—", conditionMessage(e))
+    if (exists("history_redact", mode = "function")) detail <- history_redact(detail)
+    log("SOURCE_HTTP_FAILED", detail)
+    stop(detail, call. = FALSE)
+  })
+  if (trace || !grepl("/Tests/", path, fixed = TRUE)) log("SOURCE_HTTP_OK", paste("HTTP", httr2::resp_status(response), target))
   httr2::resp_body_string(response)
 }
 
