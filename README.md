@@ -53,6 +53,8 @@ Generated exports, captured source pages, local credentials, and runtime caches 
 
 Development source is published in this public repository. The user pulls the selected changes and pushes them to an institution-controlled private GitHub repository. Institution-managed Posit Connect then deploys the scheduled report and Shiny application from that private repository using GitHub-backed deployment.
 
+Run `source("scripts/build-deploy.R")` with the project library loaded to synchronize the deployment directories and call `rsconnect::writeManifest()` for each content item. Commit both `deploy/app/manifest.json` and `deploy/collector/manifest.json` with the generated source files. See [manifest generation](docs/deployment.md#generate-the-connect-deployment-manifests) for the exact calls and Connect directory selections.
+
 Institution-specific configuration and credentials are supplied through supported deployment settings or private configuration. Historical snapshots remain in pins across source updates and redeployments. Public examples will use placeholders; automatic public-to-private mirroring is outside the initial scope.
 
 ## Copyright

@@ -23,10 +23,50 @@ The sample script verifies the complete inventory but exports seven representati
 
 Defaults use a local pins board in `outputs/board`, with source captures and exports in `outputs/runs`. These directories are ignored by Git. `.env.example` documents configuration; it is not loaded automatically. A private `.Renviron` can configure local R sessions.
 
+## Generate the Connect deployment manifests
+
+Git-backed deployment uses `rsconnect::writeManifest()`. This project has two content items, each with its own manifest:
+
+| Content | Connect content directory | Manifest to commit |
+| --- | --- | --- |
+| Shiny history viewer | `deploy/app` | `deploy/app/manifest.json` |
+| Scheduled collection report | `deploy/collector` | `deploy/collector/manifest.json` |
+
+Both manifests are already committed. To regenerate them after changing code or dependencies, run this from an R session at the repository root:
+
+```r
+renv::load()
+source("scripts/build-deploy.R")
+```
+
+The helper first copies the current entry points, shared R code, copyright notice, and lockfile into the two deployment directories. It then runs these `rsconnect::writeManifest()` calls:
+
+```r
+rsconnect::writeManifest(
+  appDir = "deploy/app",
+  appFiles = c("app.R", "R/source.R", "R/history.R", "renv.lock", "COPYRIGHT"),
+  appPrimaryDoc = "app.R",
+  appMode = "shiny",
+  quarto = FALSE
+)
+
+rsconnect::writeManifest(
+  appDir = "deploy/collector",
+  appFiles = c("collector.Rmd", "R/source.R", "R/history.R", "renv.lock", "COPYRIGHT"),
+  appPrimaryDoc = "collector.Rmd",
+  appMode = "rmd-static",
+  quarto = FALSE
+)
+```
+
+Use the helper to keep deployment copies synchronized with root source files before generating their manifests. Commit the generated files and manifests, then push them to the private GitHub repository used by Connect. Manifest generation prepares files locally; Connect performs deployment from Git after those files are pushed.
+
+Generate manifests using an R runtime supported by your Connect installation. If you need to change the R or package versions recorded in `renv.lock`, restore/test the intended environment and update the lockfile before regenerating the deployment directories and manifests.
+
 ## Public to private GitHub
 
 1. Develop and test in the public repository.
-2. After editing source files or dependency versions, run `renv::load(); source("scripts/build-deploy.R")` in R at the repository root. Commit both generated `deploy/` directories, manifests, and the lockfile along with source changes. The generated copies must match the root source files.
+2. After editing source files or dependency versions, [regenerate both manifests](#generate-the-connect-deployment-manifests) with `renv::load(); source("scripts/build-deploy.R")` in R at the repository root. Commit both generated `deploy/` directories, manifests, and the lockfile along with source changes. The generated copies must match the root source files.
 3. Pull the public revision and push it to the institution's private repository using your usual transfer process.
 4. Configure two Git-backed Connect content items from the private repository: `deploy/app` for Shiny and `deploy/collector` for the scheduled report. Each directory is self-contained; Connect requires no access to the public repository at runtime.
 
