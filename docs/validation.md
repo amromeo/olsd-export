@@ -58,6 +58,16 @@ These checks do not prove network access or permissions on the institution's Con
 
 The updated local suite passed 97 assertions with no failures, warnings, or skips. Both generated deployment copies and their manifest checksums were verified after regeneration. The institution-side timeout remains unverified until the updated diagnostics run there.
 
+## Manifest repository validation
+
+An institution-side log identified Connect 2025.02.0, R 4.4.3, and RHEL 8.10; failure occurred during Packrat repository resolution before the collector started. The associated local Windows transcript showed source-index access warnings during `rsconnect::writeManifest()`, despite successful binary installation through another CRAN host.
+
+A local regression test reproduces rsconnect 1.11.2 writing null package repository URLs when its available-package index is empty. Manifest generation now checks named lockfile repositories, tests source-index access, validates package repository URLs, and stages both content items before replacing existing deployment files. Tests also verify that an unreadable index or invalid second manifest leaves both prior deployment directories intact.
+
+The institution's actual generated manifest and successful redeployment remain to be verified. Current local validation uses R 4.5.3; it does not establish R 4.4.3 compatibility on that installation.
+
+The expanded local suite passed 107 assertions with no failures, warnings, or skips. Both manifests were regenerated successfully against a reachable source index and their package repository URLs validated. No application extraction or snapshot schema changes were made for this build-time fix.
+
 ## Remaining target checks
 
 The actual Connect installation has not been accessed. Private GitHub deployment, installed runtime compatibility, fresh package restoration, pins ownership/sharing, scheduling and overlap behavior, email recipients and delivery, and history preservation across redeployment remain required checks. Follow [the deployment guide](deployment.md) after transferring the code to the private repository.

@@ -60,7 +60,7 @@ renv::load()
 source("scripts/build-deploy.R")
 ```
 
-The helper first copies the current entry points, shared R code, copyright notice, and lockfile into the two deployment directories. It then runs these `rsconnect::writeManifest()` calls:
+The helper checks the named repositories in `renv.lock` and verifies source-index access. It stages the current entry points, shared R code, copyright notice, and lockfile, then runs these `rsconnect::writeManifest()` calls:
 
 ```r
 rsconnect::writeManifest(
@@ -82,7 +82,38 @@ rsconnect::writeManifest(
 
 Use the helper to keep deployment copies synchronized with root source files before generating their manifests. Commit the generated files and manifests, then push them to the private GitHub repository used by Connect. Manifest generation prepares files locally; Connect performs deployment from Git after those files are pushed.
 
+Both manifests must have valid package repository URLs before the helper replaces either deployment directory. An unreadable source index or missing repository URLs now stop generation locally; prior deployment files are retained. The build helpers live in `R/deployment.R` and are not included in the runtime bundles.
+
 Generate manifests using an R runtime supported by your Connect installation. If you need to change the R or package versions recorded in `renv.lock`, restore/test the intended environment and update the lockfile before regenerating the deployment directories and manifests.
+
+### Connect fails at repository resolution with `repos[[1]]`
+
+An observed Connect 2025.02 / R 4.4.3 deployment failed in `readLockFile` with `Error in repos[[1]]: subscript out of bounds` before application code executed. In the associated Windows build, `rsconnect` reported that it could not read `https://cloud.r-project.org/src/contrib/PACKAGES` but still generated manifests. This failure mode was reproduced with rsconnect 1.11.2: an unavailable package index can leave package `Repository` fields null.
+
+Binary package installation can succeed even when source-index access fails. Test a mirror permitted by your institution, then record that named repository in the lockfile and rebuild. The example below uses the host that supplied successful binary downloads in the reported Windows session; its source index must still pass the explicit check. Run the entire block in **R**, from the repository root, after updating the build helper:
+
+```r
+{
+  cran <- c(CRAN = "https://cran.rstudio.com")
+  index <- utils::available.packages(repos = cran, type = "source")
+  stopifnot(nrow(index) > 0L)
+  options(repos = cran)
+  renv::snapshot(repos = cran, prompt = FALSE)
+  source("scripts/build-deploy.R")
+}
+```
+
+If the source-index check fails, resolve access/trust/proxy configuration or use the institution's approved reachable repository; do not publish another manifest with missing URLs. Keep TLS verification enabled. The snapshot records your installed dependency versions, including intentional binary-compatible updates; avoid replacing a repaired private lockfile with the original public versions merely to regenerate manifests.
+
+Commit the changed lockfile, both copied deployment lockfiles, and manifests in **Git Bash/Terminal**, not the R console:
+
+```bash
+git add renv.lock deploy/app/renv.lock deploy/collector/renv.lock deploy/app/manifest.json deploy/collector/manifest.json
+git commit -m "Regenerate Connect manifests with reachable repository"
+git push origin main
+```
+
+The reported Windows session uses R 4.5.2 while the observed Connect runner uses R 4.4.3. This is separate from the missing-repository error. Validate with the institution's supported runtime and generate compatible dependency metadata; do not manually edit manifest version fields to claim an untested runtime.
 
 ## Public to private GitHub
 
